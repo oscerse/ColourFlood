@@ -13,7 +13,7 @@ const ColorFlood = () => {
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
-  const MUSIC_TRACKS = ['audio/background1.mp3', 'audio/background2.mp3', 'audio/background3.mp3'];
+  const MUSIC_TRACKS = ['audio/background1.mp3', 'audio/background2.mp3', 'audio/background3.mp3', 'audio/background4.mp3'];
 
   // Game state
   const [grid, setGrid] = useState([]);
@@ -36,29 +36,55 @@ const ColorFlood = () => {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
   const [audioInitialized, setAudioInitialized] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [showSplashScreen, setShowSplashScreen] = useState(true);
+  const [cellSize, setCellSize] = useState(24);
   
   // Audio references
   const audioRef = useRef(null);
+  const gameContainerRef = useRef(null);
 
   // Initialize game
   useEffect(() => {
-    // Check screen size
-    const checkScreenSize = () => {
-      setIsSmallScreen(window.innerWidth < 768);
-    };
-    
-    checkScreenSize();
-    window.addEventListener('resize', checkScreenSize);
-    
     // Setup audio without playing
     setupAudio();
     
+    // Initial size calculation
+    window.addEventListener('resize', calculateOptimalCellSize);
+    
     return () => {
-      window.removeEventListener('resize', checkScreenSize);
+      window.removeEventListener('resize', calculateOptimalCellSize);
     };
   }, []);
+  
+  // Calculate optimal cell size when container or window resizes
+  const calculateOptimalCellSize = () => {
+    if (!gameContainerRef.current) return;
+    
+    // Get the container width and height
+    const container = gameContainerRef.current;
+    const containerWidth = container.clientWidth;
+    
+    // Get the available height for the grid
+    const windowHeight = window.innerHeight;
+    const titleHeight = 60; // Approximate height of the title
+    const infoHeight = 120; // Approximate height of the info section
+    const controlsHeight = 60; // Approximate height of controls
+    const colorButtonsHeight = 100; // Approximate height of color buttons
+    const padding = 40; // Some padding
+    
+    // Calculate available height for grid
+    const availableHeight = windowHeight - titleHeight - infoHeight - controlsHeight - colorButtonsHeight - padding;
+    
+    // Calculate maximum possible cell size while keeping the grid square
+    const maxWidthBasedSize = Math.floor((containerWidth - 28) / GRID_SIZE); // 28 = grid padding + borders
+    const maxHeightBasedSize = Math.floor(availableHeight / GRID_SIZE);
+    
+    // Use the smaller of the two sizes to ensure the grid fits
+    const newSize = Math.max(Math.min(maxWidthBasedSize, maxHeightBasedSize), 12); // Minimum 12px
+    
+    // Update cell size
+    setCellSize(newSize);
+  };
 
   // Setup audio system
   const setupAudio = () => {
@@ -111,8 +137,9 @@ const ColorFlood = () => {
     }
   }, [volume]);
 
-  // Start game from splash screen
-  const startGame = () => {
+  // Start game from splash screen with selected mode
+  const startGame = (mode) => {
+    setSelectedMode(mode);
     setShowSplashScreen(false);
     startNewGame();
     
@@ -127,6 +154,9 @@ const ColorFlood = () => {
         });
       }
     }
+    
+    // Calculate optimal cell size after short delay to ensure containers are mounted
+    setTimeout(calculateOptimalCellSize, 100);
   };
 
   // When level changes, update number of colors with new progression
@@ -372,9 +402,18 @@ const ColorFlood = () => {
           <div className="splash-description">
             Fill the grid with a single color in as few moves as possible!
           </div>
-          <button className="play-button" onClick={startGame}>
-            PLAY GAME
-          </button>
+          
+          <div className="splash-modes">
+            <button className="splash-mode-button active" onClick={() => startGame('classic')}>
+              PLAY CLASSIC MODE
+            </button>
+            <button className="splash-mode-button coming-soon" disabled>
+              TIME ATTACK (Coming Soon)
+            </button>
+            <button className="splash-mode-button coming-soon" disabled>
+              PUZZLE MODE (Coming Soon)
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -382,16 +421,6 @@ const ColorFlood = () => {
 
   // Render the game grid
   const renderGrid = () => {
-    // Calculate cell size based on screen width
-    const getCellSize = () => {
-      if (isSmallScreen) {
-        return 16; // Smaller on mobile
-      }
-      return 24; // Normal size on desktop
-    };
-    
-    const cellSize = getCellSize();
-    
     return (
       <div className="grid-container">
         {grid.map((row, rowIndex) => (
@@ -411,7 +440,7 @@ const ColorFlood = () => {
                     height: `${cellSize}px`
                   }}
                 >
-                  {isStart && <span className="start-marker">S</span>}
+                  {isStart && cellSize > 16 && <span className="start-marker">S</span>}
                 </div>
               );
             })}
@@ -423,6 +452,9 @@ const ColorFlood = () => {
 
   // Render color buttons
   const renderColorButtons = () => {
+    // Calculate button size based on cell size
+    const buttonSize = Math.max(40, cellSize * 1.5);
+    
     return (
       <div className="color-buttons-container">
         <div className="color-buttons">
@@ -435,7 +467,11 @@ const ColorFlood = () => {
               )}
               <button
                 className={`color-button ${color === activeColor ? 'active' : ''} ${color === previewColor ? 'previewing' : ''}`}
-                style={{ backgroundColor: color }}
+                style={{ 
+                  backgroundColor: color,
+                  width: `${buttonSize}px`,
+                  height: `${buttonSize}px`
+                }}
                 onClick={() => handleColorClick(color)}
                 onMouseEnter={() => calculatePreviewArea(color)}
                 onMouseLeave={() => {
@@ -456,7 +492,7 @@ const ColorFlood = () => {
   const renderGameInfo = () => {
     return (
       <div className="game-info">
-        <div className={`info-grid ${isSmallScreen ? 'compact' : ''}`}>
+        <div className="info-grid">
           <div className="info-cell">
             <div className="info-item">
               <span className="info-label">LEVEL</span>
@@ -487,46 +523,6 @@ const ColorFlood = () => {
             </div>
           </div>
         </div>
-      </div>
-    );
-  };
-
-  // Render game modes
-  const renderGameModes = () => {
-    if (isSmallScreen) {
-      return (
-        <div className="game-modes">
-          <button 
-            className={`mode-button ${selectedMode === 'classic' ? 'active' : ''}`}
-            onClick={() => setSelectedMode('classic')}
-          >
-            Classic
-          </button>
-          <div className="compact-modes-dropdown">
-            <span>More Modes</span>
-            <div className="dropdown-content">
-              <button className="mode-button coming-soon">Time Attack</button>
-              <button className="mode-button coming-soon">Puzzle Mode</button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="game-modes">
-        <button 
-          className={`mode-button ${selectedMode === 'classic' ? 'active' : ''}`}
-          onClick={() => setSelectedMode('classic')}
-        >
-          Classic Mode
-        </button>
-        <button className="mode-button coming-soon">
-          Time Attack (Coming Soon)
-        </button>
-        <button className="mode-button coming-soon">
-          Puzzle Mode (Coming Soon)
-        </button>
       </div>
     );
   };
@@ -688,15 +684,17 @@ const ColorFlood = () => {
 
   return (
     <div 
-      className={`color-flood-game ${darkMode ? 'dark-mode' : 'light-mode'} ${isSmallScreen ? 'mobile-layout' : ''}`}
+      className="color-flood-game-container"
+      ref={gameContainerRef}
     >
-      <h1 className="game-title">COLOUR FLOOD</h1>
-      {renderGameModes()}
-      {renderGameInfo()}
-      {renderGrid()}
-      {renderColorButtons()}
-      {renderControls()}
-      {renderModals()}
+      <div className={`color-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+        <h1 className="game-title">COLOUR FLOOD</h1>
+        {renderGameInfo()}
+        {renderGrid()}
+        {renderColorButtons()}
+        {renderControls()}
+        {renderModals()}
+      </div>
     </div>
   );
 };
