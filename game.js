@@ -14,10 +14,10 @@ const ColorFlood = () => {
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
   const MUSIC_TRACKS = [
-    'audio/Arcadia.mp3',
     'audio/Elysium.mp3',
+    'audio/RetroPulse.mp3',
     'audio/Serene.mp3',
-    'audio/RetroPulse.mp3'
+    'audio/Arcadia.mp3'
   ];
 
   // Game state
