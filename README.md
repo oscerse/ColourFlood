@@ -48,4 +48,4 @@ This project is open source and available under the MIT License.
 
 ## Acknowledgements
 
-Developed as a collaborative project with Claude AI.
+Developed as a collaborative project with Claude AI and Riffusion.
