@@ -13,7 +13,7 @@ const ColorFlood = () => {
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
-  const MUSIC_TRACKS = ['audio/background1.mp3', 'audio/background2.mp3', 'audio/background3.mp3'];
+  const MUSIC_TRACKS = ['audio/background1.mp3', 'audio/background2.mp3', 'audio/background3.mp3', 'audio/background4.mp3'];
 
   // Game state
   const [grid, setGrid] = useState([]);
@@ -38,69 +38,38 @@ const ColorFlood = () => {
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [showSplashScreen, setShowSplashScreen] = useState(true);
   const [cellSize, setCellSize] = useState(24);
-  const [gridWidth, setGridWidth] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Audio references
   const audioRef = useRef(null);
-  const gameContainerRef = useRef(null);
-  const gridRef = useRef(null);
 
   // Initialize game
   useEffect(() => {
     // Setup audio without playing
     setupAudio();
     
-    // Handle window resize
-    window.addEventListener('resize', handleWindowResize);
+    // Check if mobile and set fixed cell size based on device
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      
+      // Set fixed cell size based on device type
+      if (mobile) {
+        setCellSize(16); // Smaller for mobile
+      } else {
+        setCellSize(24); // Larger for desktop
+      }
+    };
+    
+    checkMobile();
+    
+    // Only resize on window size change, not during gameplay
+    window.addEventListener('resize', checkMobile);
     
     return () => {
-      window.removeEventListener('resize', handleWindowResize);
+      window.removeEventListener('resize', checkMobile);
     };
   }, []);
-  
-  // Handle window resize - debounced for performance
-  const handleWindowResize = () => {
-    if (timeout) clearTimeout(timeout);
-    let timeout = setTimeout(() => {
-      calculateOptimalCellSize();
-    }, 100);
-  };
-  
-  // Calculate optimal cell size when container or window resizes
-  const calculateOptimalCellSize = () => {
-    if (!gameContainerRef.current) return;
-    
-    // Get the screen dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const isMobile = viewportWidth < 768;
-    
-    // Calculate available width for grid
-    let availableWidth;
-    
-    if (isMobile) {
-      availableWidth = Math.min(viewportWidth - 40, 400); // Mobile: leave some margin, max 400px
-    } else {
-      availableWidth = Math.min(viewportWidth * 0.6, 500); // Desktop: 60% of viewport, max 500px
-    }
-    
-    // Calculate cell size based on available width
-    const sizeBasedOnWidth = Math.floor((availableWidth - 28) / GRID_SIZE);
-    
-    // Calculate available height
-    const availableHeight = viewportHeight * 0.55; // Use 55% of viewport height for grid
-    const sizeBasedOnHeight = Math.floor(availableHeight / GRID_SIZE);
-    
-    // Use the smaller of the two sizes to ensure grid fits
-    const newSize = Math.max(Math.min(sizeBasedOnWidth, sizeBasedOnHeight), 12);
-    
-    // Update cell size
-    setCellSize(newSize);
-    
-    // Calculate and set grid width (for constraining other elements)
-    const newGridWidth = (newSize + 2) * GRID_SIZE + 8; // +2 for margins, +8 for container padding
-    setGridWidth(newGridWidth);
-  };
 
   // Setup audio system
   const setupAudio = () => {
@@ -170,9 +139,6 @@ const ColorFlood = () => {
         });
       }
     }
-    
-    // Calculate optimal cell size after short delay to ensure containers are mounted
-    setTimeout(calculateOptimalCellSize, 100);
   };
 
   // When level changes, update number of colors with new progression
@@ -438,7 +404,7 @@ const ColorFlood = () => {
   // Render the game grid
   const renderGrid = () => {
     return (
-      <div className="grid-container" ref={gridRef}>
+      <div className="grid-container">
         {grid.map((row, rowIndex) => (
           <div key={rowIndex} className="grid-row">
             {row.map((cell, colIndex) => {
@@ -469,10 +435,10 @@ const ColorFlood = () => {
   // Render color buttons
   const renderColorButtons = () => {
     // Calculate button size based on cell size
-    const buttonSize = Math.max(40, cellSize * 1.5);
+    const buttonSize = Math.max(36, Math.min(50, cellSize * 1.8));
     
     return (
-      <div className="color-buttons-container" style={{ maxWidth: gridWidth ? `${gridWidth}px` : '100%' }}>
+      <div className="color-buttons-container">
         <div className="color-buttons">
           {gameColors.map((color, index) => (
             <div key={index} className="button-wrapper">
@@ -507,7 +473,7 @@ const ColorFlood = () => {
   // Render game info
   const renderGameInfo = () => {
     return (
-      <div className="game-info" style={{ maxWidth: gridWidth ? `${gridWidth}px` : '100%' }}>
+      <div className="game-info">
         <div className="info-grid">
           <div className="info-cell">
             <div className="info-item">
@@ -546,7 +512,7 @@ const ColorFlood = () => {
   // Render controls (theme, audio, info)
   const renderControls = () => {
     return (
-      <div className="controls-container" style={{ maxWidth: gridWidth ? `${gridWidth}px` : '100%' }}>
+      <div className="controls-container">
         <div className="controls-group">
           <button 
             className="info-button" 
@@ -699,10 +665,7 @@ const ColorFlood = () => {
   }
 
   return (
-    <div 
-      className="color-flood-game-container"
-      ref={gameContainerRef}
-    >
+    <div className="game-wrapper">
       <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
         <h1 className="game-title">COLOUR FLOOD</h1>
         {renderGameInfo()}
