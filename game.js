@@ -400,7 +400,7 @@ const ColorFlood = () => {
         <div className="splash-content">
           <h1 className="splash-title">COLOUR FLOOD</h1>
           <div className="splash-description">
-            Fill the grid with a single color in as few moves as possible!
+            Fill the grid with a single colour in as few moves as possible!
           </div>
           
           <div className="splash-modes">
