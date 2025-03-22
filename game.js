@@ -31,32 +31,70 @@ const ColorFlood = () => {
   const [selectedMode, setSelectedMode] = useState('classic');
   const [darkMode, setDarkMode] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(50); // Default volume: 50%
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
+  const [audioInitialized, setAudioInitialized] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   
   // Audio references
   const audioRef = useRef(null);
-  const initializedAudioRef = useRef(false);
 
   // Initialize game
   useEffect(() => {
     startNewGame();
+    
+    // Check screen size
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 768);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
   }, []);
 
   // Initialize audio system
   useEffect(() => {
-    if (!initializedAudioRef.current) {
-      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
-      audioRef.current.volume = 0.5; // Set volume to 50%
-      
-      // Add event listener for when the track ends
-      audioRef.current.addEventListener('ended', playNextTrack);
-      
-      // Don't auto-play until user interaction
-      initializedAudioRef.current = true;
-    }
+    setupAudio();
   }, []);
+  
+  // Setup audio system
+  const setupAudio = () => {
+    if (!audioRef.current) {
+      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
+      audioRef.current.volume = volume / 100;
+      audioRef.current.addEventListener('ended', playNextTrack);
+    }
+  };
+
+  // Try to play audio after user interaction
+  const tryPlayAudio = () => {
+    if (audioRef.current && !isMuted) {
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setAudioInitialized(true);
+          })
+          .catch(error => {
+            console.log("Audio play failed:", error);
+          });
+      }
+    }
+  };
+
+  // Handle any user interaction to initialize audio
+  const handleUserInteraction = () => {
+    if (!audioInitialized) {
+      tryPlayAudio();
+    }
+  };
 
   // Handle mute toggle
   useEffect(() => {
@@ -64,20 +102,17 @@ const ColorFlood = () => {
       if (isMuted) {
         audioRef.current.pause();
       } else {
-        // Only attempt to play if the user has interacted with the page
-        if (initializedAudioRef.current) {
-          const playPromise = audioRef.current.play();
-          
-          // Handle potential play() promise rejection (browsers require user interaction)
-          if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.log("Audio playback requires user interaction first");
-            });
-          }
-        }
+        tryPlayAudio();
       }
     }
   }, [isMuted]);
+  
+  // Handle volume change
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
 
   // Play next track when current one ends
   const playNextTrack = () => {
@@ -88,39 +123,15 @@ const ColorFlood = () => {
       audioRef.current.src = MUSIC_TRACKS[nextTrack];
       
       if (!isMuted) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log("Audio playback failed:", error);
-          });
-        }
-      }
-    }
-  };
-
-  // Manually start audio after user interaction (needed for some browsers)
-  const initializeAudio = () => {
-    if (audioRef.current && !isMuted && initializedAudioRef.current) {
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.log("Manual audio start failed:", error);
-        });
+        tryPlayAudio();
       }
     }
   };
 
   // Toggle mute state
   const toggleMute = () => {
-    // If this is the first user interaction, try to start the audio
-    if (!initializedAudioRef.current) {
-      initializedAudioRef.current = true;
-    }
-    
     setIsMuted(!isMuted);
-    
-    // This is a user interaction, so try to initialize audio
-    initializeAudio();
+    handleUserInteraction();
   };
 
   // When level changes, update number of colors with new progression
@@ -192,9 +203,7 @@ const ColorFlood = () => {
     setLevel(1);
     const numColors = 3; // Start with 3 colors
     setGameColors(COLORS[colorPalette].slice(0, numColors));
-    
-    // Try to initialize audio if this is from a user click
-    initializeAudio();
+    handleUserInteraction();
   };
   
   // Reset current level
@@ -202,9 +211,7 @@ const ColorFlood = () => {
     setShowResetConfirm(false);
     setMovesLeft(DEFAULT_MOVES);
     initializeGrid();
-    
-    // Try to initialize audio if this is from a user click
-    initializeAudio();
+    handleUserInteraction();
   };
 
   // Start next level
@@ -217,9 +224,7 @@ const ColorFlood = () => {
     setLevel(prev => prev + 1);
     setMovesLeft(DEFAULT_MOVES);
     // Score carries over
-    
-    // Try to initialize audio if this is from a user click
-    initializeAudio();
+    handleUserInteraction();
   };
 
   // Cycle through color palettes
@@ -228,9 +233,7 @@ const ColorFlood = () => {
     const currentIndex = palettes.indexOf(colorPalette);
     const nextIndex = (currentIndex + 1) % palettes.length;
     setColorPalette(palettes[nextIndex]);
-    
-    // Try to initialize audio if this is from a user click
-    initializeAudio();
+    handleUserInteraction();
   };
 
   // Calculate preview area for a color
@@ -293,8 +296,7 @@ const ColorFlood = () => {
   const handleColorClick = (color) => {
     if (gameState !== 'playing' || color === activeColor) return;
 
-    // Try to initialize audio since this is a user interaction
-    initializeAudio();
+    handleUserInteraction();
 
     // Clear preview state
     setPreviewArea([]);
@@ -374,6 +376,16 @@ const ColorFlood = () => {
 
   // Render the game grid
   const renderGrid = () => {
+    // Calculate cell size based on screen width
+    const getCellSize = () => {
+      if (isSmallScreen) {
+        return 16; // Smaller on mobile
+      }
+      return 24; // Normal size on desktop
+    };
+    
+    const cellSize = getCellSize();
+    
     return (
       <div className="grid-container">
         {grid.map((row, rowIndex) => (
@@ -387,7 +399,11 @@ const ColorFlood = () => {
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={`grid-cell ${isActive ? 'active' : ''} ${isPreview ? 'preview' : ''} ${isStart ? 'start' : ''}`}
-                  style={{ backgroundColor: cell }}
+                  style={{ 
+                    backgroundColor: cell,
+                    width: `${cellSize}px`,
+                    height: `${cellSize}px`
+                  }}
                 >
                   {isStart && <span className="start-marker">S</span>}
                 </div>
@@ -434,7 +450,7 @@ const ColorFlood = () => {
   const renderGameInfo = () => {
     return (
       <div className="game-info">
-        <div className="info-grid">
+        <div className={`info-grid ${isSmallScreen ? 'compact' : ''}`}>
           <div className="info-cell">
             <div className="info-item">
               <span className="info-label">LEVEL</span>
@@ -449,7 +465,7 @@ const ColorFlood = () => {
           </div>
           <div className="info-cell">
             <div className="info-item">
-              <span className="info-label">MOVES LEFT</span>
+              <span className="info-label">MOVES</span>
               <span className="info-value">{movesLeft}</span>
             </div>
           </div>
@@ -471,6 +487,26 @@ const ColorFlood = () => {
 
   // Render game modes
   const renderGameModes = () => {
+    if (isSmallScreen) {
+      return (
+        <div className="game-modes">
+          <button 
+            className={`mode-button ${selectedMode === 'classic' ? 'active' : ''}`}
+            onClick={() => setSelectedMode('classic')}
+          >
+            Classic
+          </button>
+          <div className="compact-modes-dropdown">
+            <span>More Modes</span>
+            <div className="dropdown-content">
+              <button className="mode-button coming-soon">Time Attack</button>
+              <button className="mode-button coming-soon">Puzzle Mode</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className="game-modes">
         <button 
@@ -500,6 +536,14 @@ const ColorFlood = () => {
             title="Game information"
           >
             <span>i</span>
+          </button>
+          
+          <button 
+            className="settings-button" 
+            onClick={() => setShowSettingsModal(true)} 
+            title="Game settings"
+          >
+            <span>⚙️</span>
           </button>
           
           <div className="theme-toggle">
@@ -580,6 +624,55 @@ const ColorFlood = () => {
           </div>
         )}
 
+        {/* Settings Modal */}
+        {showSettingsModal && (
+          <div className="modal-overlay">
+            <div className="modal settings-modal">
+              <h3>Settings</h3>
+              <div className="settings-content">
+                <div className="volume-control">
+                  <label htmlFor="volume-slider">Music Volume: {volume}%</label>
+                  <input 
+                    id="volume-slider"
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={volume} 
+                    onChange={(e) => {
+                      setVolume(parseInt(e.target.value));
+                      handleUserInteraction();
+                    }}
+                    className="volume-slider"
+                  />
+                  <div className="volume-buttons">
+                    <button 
+                      onClick={() => {
+                        setIsMuted(!isMuted);
+                        handleUserInteraction();
+                      }}
+                      className="volume-button"
+                    >
+                      {isMuted ? 'Unmute' : 'Mute'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        tryPlayAudio();
+                        setIsMuted(false);
+                      }}
+                      className="volume-button play-button"
+                    >
+                      Play Music
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button className="modal-button" onClick={() => setShowSettingsModal(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Info Modal */}
         {showInfoModal && (
           <div className="modal-overlay">
@@ -606,6 +699,15 @@ const ColorFlood = () => {
             </div>
           </div>
         )}
+        
+        {/* Audio Start Notification (only if needed) */}
+        {!audioInitialized && (
+          <div className="audio-notification" onClick={handleUserInteraction}>
+            <div className="audio-notification-content">
+              Click anywhere to enable music
+            </div>
+          </div>
+        )}
       </>
     );
   };
@@ -616,7 +718,10 @@ const ColorFlood = () => {
   }
 
   return (
-    <div className={`color-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+    <div 
+      className={`color-flood-game ${darkMode ? 'dark-mode' : 'light-mode'} ${isSmallScreen ? 'mobile-layout' : ''}`}
+      onClick={handleUserInteraction}
+    >
       <h1 className="game-title">COLOR FLOOD</h1>
       {renderGameModes()}
       {renderGameInfo()}
