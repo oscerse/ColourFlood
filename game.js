@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 const ColorFlood = () => {
   // Game constants
@@ -13,6 +13,7 @@ const ColorFlood = () => {
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
+  const MUSIC_TRACKS = ['audio/background1.mp3', 'audio/background2.mp3', 'audio/background3.mp3'];
 
   // Game state
   const [grid, setGrid] = useState([]);
@@ -32,11 +33,95 @@ const ColorFlood = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [currentTrack, setCurrentTrack] = useState(0);
+  
+  // Audio references
+  const audioRef = useRef(null);
+  const initializedAudioRef = useRef(false);
 
   // Initialize game
   useEffect(() => {
     startNewGame();
   }, []);
+
+  // Initialize audio system
+  useEffect(() => {
+    if (!initializedAudioRef.current) {
+      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
+      audioRef.current.volume = 0.5; // Set volume to 50%
+      
+      // Add event listener for when the track ends
+      audioRef.current.addEventListener('ended', playNextTrack);
+      
+      // Don't auto-play until user interaction
+      initializedAudioRef.current = true;
+    }
+  }, []);
+
+  // Handle mute toggle
+  useEffect(() => {
+    if (audioRef.current) {
+      if (isMuted) {
+        audioRef.current.pause();
+      } else {
+        // Only attempt to play if the user has interacted with the page
+        if (initializedAudioRef.current) {
+          const playPromise = audioRef.current.play();
+          
+          // Handle potential play() promise rejection (browsers require user interaction)
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.log("Audio playback requires user interaction first");
+            });
+          }
+        }
+      }
+    }
+  }, [isMuted]);
+
+  // Play next track when current one ends
+  const playNextTrack = () => {
+    const nextTrack = (currentTrack + 1) % MUSIC_TRACKS.length;
+    setCurrentTrack(nextTrack);
+    
+    if (audioRef.current) {
+      audioRef.current.src = MUSIC_TRACKS[nextTrack];
+      
+      if (!isMuted) {
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log("Audio playback failed:", error);
+          });
+        }
+      }
+    }
+  };
+
+  // Manually start audio after user interaction (needed for some browsers)
+  const initializeAudio = () => {
+    if (audioRef.current && !isMuted && initializedAudioRef.current) {
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.log("Manual audio start failed:", error);
+        });
+      }
+    }
+  };
+
+  // Toggle mute state
+  const toggleMute = () => {
+    // If this is the first user interaction, try to start the audio
+    if (!initializedAudioRef.current) {
+      initializedAudioRef.current = true;
+    }
+    
+    setIsMuted(!isMuted);
+    
+    // This is a user interaction, so try to initialize audio
+    initializeAudio();
+  };
 
   // When level changes, update number of colors with new progression
   useEffect(() => {
@@ -107,6 +192,9 @@ const ColorFlood = () => {
     setLevel(1);
     const numColors = 3; // Start with 3 colors
     setGameColors(COLORS[colorPalette].slice(0, numColors));
+    
+    // Try to initialize audio if this is from a user click
+    initializeAudio();
   };
   
   // Reset current level
@@ -114,6 +202,9 @@ const ColorFlood = () => {
     setShowResetConfirm(false);
     setMovesLeft(DEFAULT_MOVES);
     initializeGrid();
+    
+    // Try to initialize audio if this is from a user click
+    initializeAudio();
   };
 
   // Start next level
@@ -126,6 +217,9 @@ const ColorFlood = () => {
     setLevel(prev => prev + 1);
     setMovesLeft(DEFAULT_MOVES);
     // Score carries over
+    
+    // Try to initialize audio if this is from a user click
+    initializeAudio();
   };
 
   // Cycle through color palettes
@@ -134,6 +228,9 @@ const ColorFlood = () => {
     const currentIndex = palettes.indexOf(colorPalette);
     const nextIndex = (currentIndex + 1) % palettes.length;
     setColorPalette(palettes[nextIndex]);
+    
+    // Try to initialize audio if this is from a user click
+    initializeAudio();
   };
 
   // Calculate preview area for a color
@@ -195,6 +292,9 @@ const ColorFlood = () => {
   // Handle color button click
   const handleColorClick = (color) => {
     if (gameState !== 'playing' || color === activeColor) return;
+
+    // Try to initialize audio since this is a user interaction
+    initializeAudio();
 
     // Clear preview state
     setPreviewArea([]);
@@ -420,7 +520,7 @@ const ColorFlood = () => {
           
           <button 
             className="audio-toggle" 
-            onClick={() => setIsMuted(!isMuted)} 
+            onClick={toggleMute} 
             title={isMuted ? "Unmute audio" : "Mute audio"}
           >
             {isMuted ? '🔇' : '🔊'}
@@ -486,9 +586,9 @@ const ColorFlood = () => {
             <div className="modal info-modal">
               <h3>How to Play</h3>
               <div className="info-content">
-                <p><strong>Goal:</strong> Fill the entire grid with one colour using minimal moves.</p>
+                <p><strong>Goal:</strong> Fill the entire grid with one color using minimal moves.</p>
                 
-                <p><strong>How to Play:</strong> Click colour buttons to change the colour region starting from top-left.</p>
+                <p><strong>How to Play:</strong> Click color buttons to change the color region starting from top-left.</p>
                 
                 <p><strong>Scoring:</strong></p>
                 <ul>
@@ -498,7 +598,7 @@ const ColorFlood = () => {
                   <li>• 500 point bonus for completing in ≤15 moves</li>
                 </ul>
                 
-                <p><strong>Progression:</strong> New colours added at levels 5, 10, and 15.</p>
+                <p><strong>Progression:</strong> New colors added at levels 5, 10, and 15.</p>
               </div>
               <button className="modal-button" onClick={() => setShowInfoModal(false)}>
                 Got it!
@@ -517,7 +617,7 @@ const ColorFlood = () => {
 
   return (
     <div className={`color-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-      <h1 className="game-title">COLOUR FLOOD</h1>
+      <h1 className="game-title">COLOR FLOOD</h1>
       {renderGameModes()}
       {renderGameInfo()}
       {renderGrid()}
