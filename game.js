@@ -13,8 +13,12 @@ const ColorFlood = () => {
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
-  const MUSIC_TRACKS = ['audio/Arcadia.mp3', 'audio/Retro Pulse.mp3', 'audio/Elysium.mp3', 'audio/Serene.mp3'];
-  const TRACK_NAMES = ['Arcadia', 'Retro Pulse', 'Elysium', 'Serene'];
+  const MUSIC_TRACKS = [
+    { file: 'audio/Arcadia.mp3', name: 'Arcadia' },
+    { file: 'audio/Retro Pulse.mp3', name: 'Retro Pulse' },
+    { file: 'audio/Elysium.mp3', name: 'Elysium' },
+    { file: 'audio/Serene.mp3', name: 'Serene' }
+  ];
 
   // Game state
   const [grid, setGrid] = useState([]);
@@ -36,37 +40,62 @@ const ColorFlood = () => {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
+  const [currentTrackName, setCurrentTrackName] = useState('');
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [showSplashScreen, setShowSplashScreen] = useState(true);
-  const [isMobile, setIsMobile] = useState(false);
+
+  // Fixed sizes that don't change during gameplay
+  const [cellSize, setCellSize] = useState(() => {
+    // Determine if mobile based on screen width
+    const isMobile = window.innerWidth < 768;
+    // Return appropriate cell size
+    return isMobile ? 16 : 24;
+  });
   
   // Audio references
   const audioRef = useRef(null);
 
-  // Initialize game
+  // Initialize game and audio
   useEffect(() => {
-    // Check if mobile
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    // Setup audio without playing
+    // Setup audio
     setupAudio();
     
+    // Update track name
+    setCurrentTrackName(MUSIC_TRACKS[currentTrack].name);
+    
+    // Function to handle resize only on initial load and window resize
+    const handleInitialResize = () => {
+      // Determine if mobile based on screen width
+      const isMobile = window.innerWidth < 768;
+      // Set cell size based on device
+      setCellSize(isMobile ? 16 : 24);
+    };
+    
+    // Set up event listener for window resize
+    window.addEventListener('resize', handleInitialResize);
+    
+    // Clean up event listener on unmount
     return () => {
-      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('resize', handleInitialResize);
     };
   }, []);
+
+  // Update track name when current track changes
+  useEffect(() => {
+    setCurrentTrackName(MUSIC_TRACKS[currentTrack].name);
+  }, [currentTrack]);
 
   // Setup audio system
   const setupAudio = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
-      audioRef.current.volume = volume / 100;
-      audioRef.current.addEventListener('ended', playNextTrack);
+      try {
+        audioRef.current = new Audio(MUSIC_TRACKS[currentTrack].file);
+        audioRef.current.volume = volume / 100;
+        audioRef.current.addEventListener('ended', playNextTrack);
+        console.log("Audio initialized with:", MUSIC_TRACKS[currentTrack].file);
+      } catch (error) {
+        console.error("Error setting up audio:", error);
+      }
     }
   };
 
@@ -76,15 +105,19 @@ const ColorFlood = () => {
     setCurrentTrack(nextTrack);
     
     if (audioRef.current) {
-      audioRef.current.src = MUSIC_TRACKS[nextTrack];
-      
-      if (!isMuted) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log("Audio play failed:", error);
-          });
+      try {
+        audioRef.current.src = MUSIC_TRACKS[nextTrack].file;
+        
+        if (!isMuted) {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.error("Audio play failed:", error);
+            });
+          }
         }
+      } catch (error) {
+        console.error("Error playing next track:", error);
       }
     }
   };
@@ -95,11 +128,15 @@ const ColorFlood = () => {
       if (isMuted) {
         audioRef.current.pause();
       } else if (audioInitialized) {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log("Audio play failed:", error);
-          });
+        try {
+          const playPromise = audioRef.current.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(error => {
+              console.error("Audio play failed on unmute:", error);
+            });
+          }
+        } catch (error) {
+          console.error("Error toggling mute:", error);
         }
       }
     }
@@ -120,13 +157,18 @@ const ColorFlood = () => {
     
     // Start playing music
     if (audioRef.current) {
-      const playPromise = audioRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          setAudioInitialized(true);
-        }).catch(error => {
-          console.log("Audio play failed:", error);
-        });
+      try {
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            setAudioInitialized(true);
+            console.log("Audio started successfully");
+          }).catch(error => {
+            console.error("Audio play failed on game start:", error);
+          });
+        }
+      } catch (error) {
+        console.error("Error starting game audio:", error);
       }
     }
   };
@@ -393,9 +435,6 @@ const ColorFlood = () => {
 
   // Render the game grid
   const renderGrid = () => {
-    // For mobile, smaller cells
-    const cellSize = isMobile ? 18 : 24;
-    
     return (
       <div className="grid-container">
         {grid.map((row, rowIndex) => (
@@ -427,8 +466,8 @@ const ColorFlood = () => {
 
   // Render color buttons
   const renderColorButtons = () => {
-    // For mobile, smaller buttons
-    const buttonSize = isMobile ? 40 : 50;
+    // Button size based on fixed cell size
+    const buttonSize = Math.max(40, cellSize * 1.5);
     
     return (
       <div className="color-buttons-container">
@@ -504,9 +543,6 @@ const ColorFlood = () => {
 
   // Render controls (theme, audio, info)
   const renderControls = () => {
-    // Get the current track name or "Muted" if muted
-    const currentTrackName = isMuted ? "Muted" : TRACK_NAMES[currentTrack];
-    
     return (
       <div className="controls-container">
         <div className="controls-group">
@@ -534,7 +570,7 @@ const ColorFlood = () => {
             </span>
           </div>
           
-          <div className="audio-controls">
+          <div className="audio-control">
             <button 
               className="audio-toggle" 
               onClick={() => setIsMuted(!isMuted)} 
@@ -542,9 +578,9 @@ const ColorFlood = () => {
             >
               {isMuted ? '🔇' : '🔊'}
             </button>
-            <div className="now-playing">
-              {currentTrackName}
-            </div>
+            <span className="now-playing">
+              {isMuted ? 'Muted' : `Now Playing: ${currentTrackName}`}
+            </span>
           </div>
         </div>
       </div>
@@ -667,13 +703,15 @@ const ColorFlood = () => {
 
   return (
     <div className="game-wrapper">
-      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
-        <h1 className="game-title">COLOUR FLOOD</h1>
-        {renderGameInfo()}
-        {renderGrid()}
-        {renderColorButtons()}
-        {renderControls()}
-        {renderModals()}
+      <div className="colour-flood-game-container">
+        <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+          <h1 className="game-title">COLOUR FLOOD</h1>
+          {renderGameInfo()}
+          {renderGrid()}
+          {renderColorButtons()}
+          {renderControls()}
+          {renderModals()}
+        </div>
       </div>
     </div>
   );
