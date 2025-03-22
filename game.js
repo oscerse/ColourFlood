@@ -15,7 +15,7 @@ const ColorFlood = () => {
   };
   const MUSIC_TRACKS = [
     'audio/Arcadia.mp3', 
-    'audio/Retro Pulse.mp3', 
+    'audio/RetroPulse.mp3', 
     'audio/Elysium.mp3',
     'audio/Serene.mp3'
   ];
