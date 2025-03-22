@@ -13,7 +13,12 @@ const ColorFlood = () => {
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
-  const MUSIC_TRACKS = ['audio/background1.mp3', 'audio/background2.mp3', 'audio/background3.mp3', 'audio/background4.mp3'];
+  const MUSIC_TRACKS = [
+    { file: 'audio/Arcadia.mp3', name: 'Arcadia' },
+    { file: 'audio/Retro Pulse.mp3', name: 'Retro Pulse' },
+    { file: 'audio/Elysium.mp3', name: 'Elysium' },
+    { file: 'audio/Serene.mp3', name: 'Serene' }
+  ];
 
   // Game state
   const [grid, setGrid] = useState([]);
@@ -37,7 +42,6 @@ const ColorFlood = () => {
   const [currentTrack, setCurrentTrack] = useState(0);
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [showSplashScreen, setShowSplashScreen] = useState(true);
-  const [cellSize, setCellSize] = useState(24);
   const [isMobile, setIsMobile] = useState(false);
   
   // Audio references
@@ -45,26 +49,16 @@ const ColorFlood = () => {
 
   // Initialize game
   useEffect(() => {
-    // Setup audio without playing
-    setupAudio();
-    
-    // Check if mobile and set fixed cell size based on device
+    // Check if mobile
     const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      
-      // Set fixed cell size based on device type
-      if (mobile) {
-        setCellSize(16); // Smaller for mobile
-      } else {
-        setCellSize(24); // Larger for desktop
-      }
+      setIsMobile(window.innerWidth < 768);
     };
     
     checkMobile();
-    
-    // Only resize on window size change, not during gameplay
     window.addEventListener('resize', checkMobile);
+    
+    // Setup audio without playing
+    setupAudio();
     
     return () => {
       window.removeEventListener('resize', checkMobile);
@@ -74,7 +68,7 @@ const ColorFlood = () => {
   // Setup audio system
   const setupAudio = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
+      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack].file);
       audioRef.current.volume = volume / 100;
       audioRef.current.addEventListener('ended', playNextTrack);
     }
@@ -86,7 +80,7 @@ const ColorFlood = () => {
     setCurrentTrack(nextTrack);
     
     if (audioRef.current) {
-      audioRef.current.src = MUSIC_TRACKS[nextTrack];
+      audioRef.current.src = MUSIC_TRACKS[nextTrack].file;
       
       if (!isMuted) {
         const playPromise = audioRef.current.play();
@@ -416,13 +410,9 @@ const ColorFlood = () => {
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={`grid-cell ${isActive ? 'active' : ''} ${isPreview ? 'preview' : ''} ${isStart ? 'start' : ''}`}
-                  style={{ 
-                    backgroundColor: cell,
-                    width: `${cellSize}px`,
-                    height: `${cellSize}px`
-                  }}
+                  style={{ backgroundColor: cell }}
                 >
-                  {isStart && cellSize > 16 && <span className="start-marker">S</span>}
+                  {isStart && <span className="start-marker">S</span>}
                 </div>
               );
             })}
@@ -434,9 +424,6 @@ const ColorFlood = () => {
 
   // Render color buttons
   const renderColorButtons = () => {
-    // Calculate button size based on cell size
-    const buttonSize = Math.max(36, Math.min(50, cellSize * 1.8));
-    
     return (
       <div className="color-buttons-container">
         <div className="color-buttons">
@@ -449,11 +436,7 @@ const ColorFlood = () => {
               )}
               <button
                 className={`color-button ${color === activeColor ? 'active' : ''} ${color === previewColor ? 'previewing' : ''}`}
-                style={{ 
-                  backgroundColor: color,
-                  width: `${buttonSize}px`,
-                  height: `${buttonSize}px`
-                }}
+                style={{ backgroundColor: color }}
                 onClick={() => handleColorClick(color)}
                 onMouseEnter={() => calculatePreviewArea(color)}
                 onMouseLeave={() => {
@@ -511,6 +494,9 @@ const ColorFlood = () => {
 
   // Render controls (theme, audio, info)
   const renderControls = () => {
+    // Get current track name or "Muted" if muted
+    const nowPlaying = isMuted ? "Muted" : MUSIC_TRACKS[currentTrack].name;
+    
     return (
       <div className="controls-container">
         <div className="controls-group">
@@ -538,13 +524,16 @@ const ColorFlood = () => {
             </span>
           </div>
           
-          <button 
-            className="audio-toggle" 
-            onClick={() => setIsMuted(!isMuted)} 
-            title={isMuted ? "Unmute audio" : "Mute audio"}
-          >
-            {isMuted ? '🔇' : '🔊'}
-          </button>
+          <div className="audio-control">
+            <button 
+              className="audio-toggle" 
+              onClick={() => setIsMuted(!isMuted)} 
+              title={isMuted ? "Unmute audio" : "Mute audio"}
+            >
+              {isMuted ? '🔇' : '🔊'}
+            </button>
+            <span className="now-playing">{nowPlaying}</span>
+          </div>
         </div>
       </div>
     );
@@ -665,8 +654,8 @@ const ColorFlood = () => {
   }
 
   return (
-    <div className="game-wrapper">
-      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
+    <div className="colour-flood-app">
+      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : ''}`}>
         <h1 className="game-title">COLOUR FLOOD</h1>
         {renderGameInfo()}
         {renderGrid()}
