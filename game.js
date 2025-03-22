@@ -13,12 +13,8 @@ const ColorFlood = () => {
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
-  const MUSIC_TRACKS = [
-    { file: 'audio/Arcadia.mp3', name: 'Arcadia' },
-    { file: 'audio/Retro Pulse.mp3', name: 'Retro Pulse' },
-    { file: 'audio/Elysium.mp3', name: 'Elysium' },
-    { file: 'audio/Serene.mp3', name: 'Serene' }
-  ];
+  const MUSIC_TRACKS = ['audio/Arcadia.mp3', 'audio/Retro Pulse.mp3', 'audio/Elysium.mp3', 'audio/Serene.mp3'];
+  const TRACK_NAMES = ['Arcadia', 'Retro Pulse', 'Elysium', 'Serene'];
 
   // Game state
   const [grid, setGrid] = useState([]);
@@ -68,7 +64,7 @@ const ColorFlood = () => {
   // Setup audio system
   const setupAudio = () => {
     if (!audioRef.current) {
-      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack].file);
+      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
       audioRef.current.volume = volume / 100;
       audioRef.current.addEventListener('ended', playNextTrack);
     }
@@ -80,7 +76,7 @@ const ColorFlood = () => {
     setCurrentTrack(nextTrack);
     
     if (audioRef.current) {
-      audioRef.current.src = MUSIC_TRACKS[nextTrack].file;
+      audioRef.current.src = MUSIC_TRACKS[nextTrack];
       
       if (!isMuted) {
         const playPromise = audioRef.current.play();
@@ -397,6 +393,9 @@ const ColorFlood = () => {
 
   // Render the game grid
   const renderGrid = () => {
+    // For mobile, smaller cells
+    const cellSize = isMobile ? 18 : 24;
+    
     return (
       <div className="grid-container">
         {grid.map((row, rowIndex) => (
@@ -410,9 +409,13 @@ const ColorFlood = () => {
                 <div
                   key={`${rowIndex}-${colIndex}`}
                   className={`grid-cell ${isActive ? 'active' : ''} ${isPreview ? 'preview' : ''} ${isStart ? 'start' : ''}`}
-                  style={{ backgroundColor: cell }}
+                  style={{ 
+                    backgroundColor: cell,
+                    width: `${cellSize}px`,
+                    height: `${cellSize}px`
+                  }}
                 >
-                  {isStart && <span className="start-marker">S</span>}
+                  {isStart && cellSize > 16 && <span className="start-marker">S</span>}
                 </div>
               );
             })}
@@ -424,6 +427,9 @@ const ColorFlood = () => {
 
   // Render color buttons
   const renderColorButtons = () => {
+    // For mobile, smaller buttons
+    const buttonSize = isMobile ? 40 : 50;
+    
     return (
       <div className="color-buttons-container">
         <div className="color-buttons">
@@ -436,7 +442,11 @@ const ColorFlood = () => {
               )}
               <button
                 className={`color-button ${color === activeColor ? 'active' : ''} ${color === previewColor ? 'previewing' : ''}`}
-                style={{ backgroundColor: color }}
+                style={{ 
+                  backgroundColor: color,
+                  width: `${buttonSize}px`,
+                  height: `${buttonSize}px`
+                }}
                 onClick={() => handleColorClick(color)}
                 onMouseEnter={() => calculatePreviewArea(color)}
                 onMouseLeave={() => {
@@ -494,8 +504,8 @@ const ColorFlood = () => {
 
   // Render controls (theme, audio, info)
   const renderControls = () => {
-    // Get current track name or "Muted" if muted
-    const nowPlaying = isMuted ? "Muted" : MUSIC_TRACKS[currentTrack].name;
+    // Get the current track name or "Muted" if muted
+    const currentTrackName = isMuted ? "Muted" : TRACK_NAMES[currentTrack];
     
     return (
       <div className="controls-container">
@@ -524,7 +534,7 @@ const ColorFlood = () => {
             </span>
           </div>
           
-          <div className="audio-control">
+          <div className="audio-controls">
             <button 
               className="audio-toggle" 
               onClick={() => setIsMuted(!isMuted)} 
@@ -532,7 +542,9 @@ const ColorFlood = () => {
             >
               {isMuted ? '🔇' : '🔊'}
             </button>
-            <span className="now-playing">{nowPlaying}</span>
+            <div className="now-playing">
+              {currentTrackName}
+            </div>
           </div>
         </div>
       </div>
@@ -654,8 +666,8 @@ const ColorFlood = () => {
   }
 
   return (
-    <div className="colour-flood-app">
-      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : ''}`}>
+    <div className="game-wrapper">
+      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
         <h1 className="game-title">COLOUR FLOOD</h1>
         {renderGameInfo()}
         {renderGrid()}
