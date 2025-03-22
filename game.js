@@ -679,9 +679,9 @@ const ColorFlood = () => {
             <div className="modal info-modal">
               <h3>How to Play</h3>
               <div className="info-content">
-                <p><strong>Goal:</strong> Fill the entire grid with one color using minimal moves.</p>
+                <p><strong>Goal:</strong> Fill the entire grid with one colour using minimal moves.</p>
                 
-                <p><strong>How to Play:</strong> Click color buttons to change the color region starting from top-left.</p>
+                <p><strong>How to Play:</strong> Click colour buttons to change the colour region starting from top-left.</p>
                 
                 <p><strong>Scoring:</strong></p>
                 <ul>
@@ -691,7 +691,7 @@ const ColorFlood = () => {
                   <li>• 500 point bonus for completing in ≤15 moves</li>
                 </ul>
                 
-                <p><strong>Progression:</strong> New colors added at levels 5, 10, and 15.</p>
+                <p><strong>Progression:</strong> New colours added at levels 5, 10, and 15.</p>
               </div>
               <button className="modal-button" onClick={() => setShowInfoModal(false)}>
                 Got it!
@@ -722,7 +722,7 @@ const ColorFlood = () => {
       className={`color-flood-game ${darkMode ? 'dark-mode' : 'light-mode'} ${isSmallScreen ? 'mobile-layout' : ''}`}
       onClick={handleUserInteraction}
     >
-      <h1 className="game-title">COLOR FLOOD</h1>
+      <h1 className="game-title">COLOUR FLOOD</h1>
       {renderGameModes()}
       {renderGameInfo()}
       {renderGrid()}
