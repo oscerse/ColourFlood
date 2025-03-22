@@ -36,7 +36,7 @@ const ColorFlood = () => {
   const [selectedMode, setSelectedMode] = useState('classic');
   const [darkMode, setDarkMode] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(50); // Default volume: 50%
+  const [volume, setVolume] = useState(30); // Default volume: 50%
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
