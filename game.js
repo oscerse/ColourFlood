@@ -14,10 +14,10 @@ const ColorFlood = () => {
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
   };
   const MUSIC_TRACKS = [
-    'audio/Elysium.mp3',
-    'audio/RetroPulse.mp3',
-    'audio/Serene.mp3',
-    'audio/Arcadia.mp3'
+    { file: 'audio/Arcadia.mp3', name: 'Arcadia' },
+    { file: 'audio/RetroPulse.mp3', name: 'RetroPulse' },
+    { file: 'audio/Elysium.mp3', name: 'Elysium' },
+    { file: 'audio/Serene.mp3', name: 'Serene' }
   ];
 
   // Game state
@@ -36,113 +36,76 @@ const ColorFlood = () => {
   const [selectedMode, setSelectedMode] = useState('classic');
   const [darkMode, setDarkMode] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(30); // Default volume: 50%
+  const [volume, setVolume] = useState(50); // Default volume: 50%
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [showSplashScreen, setShowSplashScreen] = useState(true);
-  const [cellSize, setCellSize] = useState(0);
-  const [isMobile, setIsMobile] = useState(false);
+  const [nowPlaying, setNowPlaying] = useState('Muted'); // Track name display
   
   // Audio references
   const audioRef = useRef(null);
   const gameContainerRef = useRef(null);
 
-  // Get track name without extension
-  const getCurrentTrackName = () => {
-    if (isMuted) return "Muted";
+  // Fixed cell sizes based on device type
+  const getCellSize = () => {
+    const isMobile = window.innerWidth <= 768;
+    const viewHeight = window.innerHeight;
     
-    const fullPath = MUSIC_TRACKS[currentTrack];
-    const fileName = fullPath.split('/').pop(); // Remove directory
-    const nameWithoutExt = fileName.split('.')[0]; // Remove extension
-    return nameWithoutExt;
+    if (isMobile) {
+      // For mobile, use smaller cells
+      return viewHeight < 700 ? 16 : 20;
+    } else {
+      // For desktop, use larger cells
+      return 24;
+    }
   };
 
   // Initialize game
   useEffect(() => {
-    // Check if mobile device
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkIfMobile();
-    
     // Setup audio without playing
     setupAudio();
-    
-    // Set initial sizes
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
   }, []);
-  
-  // Handle window resize - only on actual window resize, not scroll
-  const handleResize = () => {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Determine if mobile based on width
-    const mobile = viewportWidth < 768;
-    setIsMobile(mobile);
-    
-    // Calculate cell size based on viewport
-    let newCellSize;
-    
-    if (mobile) {
-      // On mobile: Use small fixed size
-      newCellSize = Math.floor(Math.min(viewportWidth / 20, 20));
-    } else {
-      // On desktop: Use larger size based on viewport height
-      newCellSize = Math.floor(Math.min(viewportHeight / 30, viewportWidth / 30, 30));
-    }
-    
-    setCellSize(newCellSize);
-  };
 
   // Setup audio system
   const setupAudio = () => {
     if (!audioRef.current) {
-      try {
-        audioRef.current = new Audio(MUSIC_TRACKS[currentTrack]);
-        audioRef.current.volume = volume / 100;
-        audioRef.current.addEventListener('ended', playNextTrack);
-        
-        // Prevent any loading or playback errors from breaking the game
-        audioRef.current.addEventListener('error', (e) => {
-          console.error("Audio error:", e);
-          // Try next track if current fails
-          setTimeout(() => playNextTrack(), 1000);
-        });
-      } catch (err) {
-        console.error("Audio setup failed:", err);
-      }
+      audioRef.current = new Audio(MUSIC_TRACKS[currentTrack].file);
+      audioRef.current.volume = volume / 100;
+      audioRef.current.addEventListener('ended', playNextTrack);
+      
+      // Update now playing text
+      setNowPlaying(isMuted ? 'Muted' : MUSIC_TRACKS[currentTrack].name);
+      
+      // Add error event handler to debug issues
+      audioRef.current.addEventListener('error', (e) => {
+        console.error('Audio error:', e);
+        console.error('Failed to load:', MUSIC_TRACKS[currentTrack].file);
+      });
     }
   };
 
   // Play next track when current one ends
   const playNextTrack = () => {
-    try {
-      const nextTrack = (currentTrack + 1) % MUSIC_TRACKS.length;
-      setCurrentTrack(nextTrack);
+    const nextTrack = (currentTrack + 1) % MUSIC_TRACKS.length;
+    setCurrentTrack(nextTrack);
+    
+    if (audioRef.current) {
+      audioRef.current.src = MUSIC_TRACKS[nextTrack].file;
       
-      if (audioRef.current) {
-        audioRef.current.src = MUSIC_TRACKS[nextTrack];
-        
-        if (!isMuted && audioInitialized) {
-          const playPromise = audioRef.current.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(error => {
-              console.log("Audio play failed:", error);
-            });
-          }
+      if (!isMuted) {
+        const playPromise = audioRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            setNowPlaying(MUSIC_TRACKS[nextTrack].name);
+          }).catch(error => {
+            console.error("Audio play failed:", error);
+            // Try to recover by moving to next track
+            setTimeout(() => playNextTrack(), 1000);
+          });
         }
       }
-    } catch (err) {
-      console.error("Error changing tracks:", err);
     }
   };
 
@@ -151,16 +114,26 @@ const ColorFlood = () => {
     if (audioRef.current) {
       if (isMuted) {
         audioRef.current.pause();
+        setNowPlaying('Muted');
       } else if (audioInitialized) {
         const playPromise = audioRef.current.play();
         if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log("Audio play failed:", error);
+          playPromise.then(() => {
+            setNowPlaying(MUSIC_TRACKS[currentTrack].name);
+          }).catch(error => {
+            console.error("Audio play failed:", error);
           });
         }
       }
     }
   }, [isMuted]);
+  
+  // Handle track change - this helps ensure the now playing text updates
+  useEffect(() => {
+    if (!isMuted && audioInitialized) {
+      setNowPlaying(MUSIC_TRACKS[currentTrack].name);
+    }
+  }, [currentTrack, audioInitialized]);
   
   // Handle volume change
   useEffect(() => {
@@ -177,20 +150,14 @@ const ColorFlood = () => {
     
     // Start playing music
     if (audioRef.current) {
-      try {
-        audioRef.current.volume = volume / 100; // Ensure volume is set
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            setAudioInitialized(true);
-          }).catch(error => {
-            console.log("Audio play failed:", error);
-            // If browser blocked autoplay, set a flag
-            setAudioInitialized(false);
-          });
-        }
-      } catch (err) {
-        console.error("Error starting audio:", err);
+      const playPromise = audioRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          setAudioInitialized(true);
+          setNowPlaying(MUSIC_TRACKS[currentTrack].name);
+        }).catch(error => {
+          console.error("Audio play failed:", error);
+        });
       }
     }
   };
@@ -353,18 +320,6 @@ const ColorFlood = () => {
   const handleColorClick = (color) => {
     if (gameState !== 'playing' || color === activeColor) return;
 
-    // Try to play audio if not already initialized
-    if (!audioInitialized && audioRef.current) {
-      try {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            setAudioInitialized(true);
-          }).catch(() => {});
-        }
-      } catch (err) {}
-    }
-
     // Clear preview state
     setPreviewArea([]);
     setPreviewColor(null);
@@ -469,14 +424,10 @@ const ColorFlood = () => {
 
   // Render the game grid
   const renderGrid = () => {
-    if (cellSize === 0) return <div className="loading">Sizing grid...</div>;
-    
-    const gridStyle = {
-      width: `${cellSize * GRID_SIZE + GRID_SIZE * 2}px`, // account for margins
-    };
+    const cellSize = getCellSize();
     
     return (
-      <div className="grid-container" style={gridStyle}>
+      <div className="grid-container">
         {grid.map((row, rowIndex) => (
           <div key={rowIndex} className="grid-row">
             {row.map((cell, colIndex) => {
@@ -506,15 +457,12 @@ const ColorFlood = () => {
 
   // Render color buttons
   const renderColorButtons = () => {
-    // Calculate button size based on cell size
-    const buttonSize = Math.max(36, Math.min(cellSize * 1.8, 50));
-    
-    const buttonsContainerStyle = {
-      width: `${cellSize * GRID_SIZE + GRID_SIZE * 2}px`, // match grid width
-    };
+    // Calculate button size based on screen size
+    const isMobile = window.innerWidth <= 768;
+    const buttonSize = isMobile ? 40 : 50;
     
     return (
-      <div className="color-buttons-container" style={buttonsContainerStyle}>
+      <div className="color-buttons-container">
         <div className="color-buttons">
           {gameColors.map((color, index) => (
             <div key={index} className="button-wrapper">
@@ -548,13 +496,9 @@ const ColorFlood = () => {
 
   // Render game info
   const renderGameInfo = () => {
-    const infoStyle = {
-      width: `${cellSize * GRID_SIZE + GRID_SIZE * 2}px`, // match grid width
-    };
-    
     return (
-      <div className="game-info" style={infoStyle}>
-        <div className={`info-grid ${isMobile ? 'mobile' : ''}`}>
+      <div className="game-info">
+        <div className="info-grid">
           <div className="info-cell">
             <div className="info-item">
               <span className="info-label">LEVEL</span>
@@ -591,14 +535,8 @@ const ColorFlood = () => {
 
   // Render controls (theme, audio, info)
   const renderControls = () => {
-    const controlsStyle = {
-      width: `${cellSize * GRID_SIZE + GRID_SIZE * 2}px`, // match grid width
-    };
-    
-    const trackName = getCurrentTrackName();
-    
     return (
-      <div className="controls-container" style={controlsStyle}>
+      <div className="controls-container">
         <div className="controls-group">
           <button 
             className="info-button" 
@@ -624,17 +562,16 @@ const ColorFlood = () => {
             </span>
           </div>
           
-          <div className="audio-controls">
-            <button 
-              className="audio-toggle" 
-              onClick={() => setIsMuted(!isMuted)} 
-              title={isMuted ? "Unmute audio" : "Mute audio"}
-            >
-              {isMuted ? '🔇' : '🔊'}
-            </button>
-            <div className="now-playing">
-              <span className="now-playing-text">{trackName}</span>
-            </div>
+          <button 
+            className="audio-toggle" 
+            onClick={() => setIsMuted(!isMuted)} 
+            title={isMuted ? "Unmute audio" : "Mute audio"}
+          >
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+          
+          <div className="now-playing">
+            {nowPlaying}
           </div>
         </div>
       </div>
@@ -741,19 +678,6 @@ const ColorFlood = () => {
             </div>
           </div>
         )}
-        
-        {/* Audio Initialization Prompt (if needed) */}
-        {!audioInitialized && !showSplashScreen && (
-          <div className="audio-prompt" onClick={() => {
-            if (audioRef.current) {
-              audioRef.current.play().then(() => {
-                setAudioInitialized(true);
-              }).catch(() => {});
-            }
-          }}>
-            Tap to enable music
-          </div>
-        )}
       </>
     );
   };
@@ -770,10 +694,10 @@ const ColorFlood = () => {
 
   return (
     <div 
-      className="color-flood-game-container"
+      className={`game-wrapper ${window.innerWidth <= 768 ? 'mobile' : 'desktop'}`}
       ref={gameContainerRef}
     >
-      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'} ${isMobile ? 'mobile' : ''}`}>
+      <div className={`colour-flood-game ${darkMode ? 'dark-mode' : 'light-mode'}`}>
         <h1 className="game-title">COLOUR FLOOD</h1>
         {renderGameInfo()}
         {renderGrid()}
