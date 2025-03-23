@@ -485,9 +485,12 @@ const ColorFlood = () => {
       const scoreBonus = movesLeft * 50;
       setScore(prev => prev + scoreBonus);
       
-      // Award 1 coin for completing the level under 15 moves
+      // Award 1 bonus coin for completing the level under 15 moves
       setCoins(prev => prev + 1);
     }
+
+    // Award 1 coin for completing the level
+      setCoins(prev => prev + 1);
     
     // Check if this level completion unlocks a new color for the next level
     const currentLevel = level;
