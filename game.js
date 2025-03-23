@@ -16,6 +16,7 @@ const ColorFlood = () => {
     monochrome: ['#FFFFFF', '#D6D6D6', '#ADADAD', '#848484', '#5B5B5B', '#333333']
   };
   const MUSIC_TRACKS = [
+    { file: 'audio/Wave.mp3', name: 'Wave' },
     { file: 'audio/Jaunt.mp3', name: 'Jaunt' },
     { file: 'audio/Pixel.mp3', name: 'Pixel' },
     { file: 'audio/Serene.mp3', name: 'Serene' },
