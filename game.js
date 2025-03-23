@@ -7,17 +7,17 @@ const ColorFlood = () => {
   const COLORS = {
     default: ['#FF5252', '#FFEB3B', '#4CAF50', '#2196F3', '#9C27B0', '#FF9800'],
     pastel: ['#FF9AA2', '#FFD6A5', '#CAFFBF', '#9BF6FF', '#BDB2FF', '#FFC6FF'],
-    retrowave: ['#FF00FF', '#00FFFF', '#FFFF00', '#0000FF', '#FF0000', '#00FF00'],
-    metallic: ['#A79E70', '#8D8741', '#7D5E2A', '#574932', '#513B29', '#3F2D20'],
-    monochrome: ['#FFFFFF', '#D6D6D6', '#ADADAD', '#848484', '#5B5B5B', '#333333'],
+    retro: ['#FF00FF', '#00FFFF', '#FFFF00', '#0000FF', '#FF0000', '#00FF00'],
+    laci: ['#88E288', '#2E8B57', '#32CD32', '#556B2F', '#9CAF88', '#00A877'],
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
-    garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50']
+    garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50'],
+    monochrome: ['#FFFFFF', '#D6D6D6', '#ADADAD', '#848484', '#5B5B5B', '#333333']
   };
   const MUSIC_TRACKS = [
-    { file: 'audio/Arcadia.mp3', name: 'Arcadia' },
+    { file: 'audio/Serene.mp3', name: 'Serene' },
     { file: 'audio/RetroPulse.mp3', name: 'RetroPulse' },
     { file: 'audio/Elysium.mp3', name: 'Elysium' },
-    { file: 'audio/Serene.mp3', name: 'Serene' }
+    { file: 'audio/Arcadia.mp3', name: 'Arcadia' }
   ];
 
   // Game state
