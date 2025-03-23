@@ -11,9 +11,12 @@ const ColorFlood = () => {
     laci: ['#88E288', '#2E8B57', '#32CD32', '#556B2F', '#9CAF88', '#00A877'],
     beach: ['#FFDE59', '#3AB4F2', '#FF9966', '#59D8A4', '#FF6B6B', '#C490D1'],
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50'],
+    pica: ['#FF0000', '#3B4CCA', '#FFDE00', '#B3A125', '#FF65DD', '#77C74C'],
+    candy: ['#FF85CB', '#1ECBE1', '#FFAA01', '#CB81FF', '#6BF178', '#FF5A5A'],
     monochrome: ['#FFFFFF', '#D6D6D6', '#ADADAD', '#848484', '#5B5B5B', '#333333']
   };
   const MUSIC_TRACKS = [
+    { file: 'audio/Pixel.mp3', name: 'Pixel' },
     { file: 'audio/Serene.mp3', name: 'Serene' },
     { file: 'audio/RetroPulse.mp3', name: 'RetroPulse' },
     { file: 'audio/Elysium.mp3', name: 'Elysium' },
