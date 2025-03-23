@@ -36,7 +36,7 @@ const ColorFlood = () => {
   const [selectedMode, setSelectedMode] = useState('classic');
   const [darkMode, setDarkMode] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(50); // Default volume: 50%
+  const [volume, setVolume] = useState(40); // Default volume: 50%
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [currentTrack, setCurrentTrack] = useState(0);
@@ -88,8 +88,8 @@ const ColorFlood = () => {
 
   // Play next track when current one ends
   const playNextTrack = () => {
-    const nextTrack = (currentTrack + 1) % MUSIC_TRACKS.length;
-    setCurrentTrack(nextTrack);
+  setCurrentTrack(prevTrack => {
+    const nextTrack = (prevTrack + 1) % MUSIC_TRACKS.length;
     
     if (audioRef.current) {
       audioRef.current.src = MUSIC_TRACKS[nextTrack].file;
@@ -107,7 +107,10 @@ const ColorFlood = () => {
         }
       }
     }
-  };
+    
+    return nextTrack;
+  });
+};
 
   // Handle mute toggle
   useEffect(() => {
