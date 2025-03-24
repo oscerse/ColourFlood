@@ -11,7 +11,7 @@ const ColorFlood = () => {
     garden: ['#8BC34A', '#FFEB3B', '#F06292', '#9575CD', '#795548', '#4CAF50'],
     pica: ['#FF0000', '#3B4CCA', '#FFDE00', '#B3A125', '#FF65DD', '#77C74C'],
     candy: ['#FF85CB', '#1ECBE1', '#FFAA01', '#CB81FF', '#6BF178', '#FF5A5A'],
-    laci: ['#88E288', '#2E8B57', '#32CD32', '#556B2F', '#9CAF88', '#00A877'],
+    laysea: ['#88E288', '#2E8B57', '#32CD32', '#556B2F', '#9CAF88', '#00A877'],
     pastel: ['#FF9AA2', '#FFD6A5', '#CAFFBF', '#9BF6FF', '#BDB2FF', '#FFC6FF'],
     monochrome: ['#FFFFFF', '#D6D6D6', '#ADADAD', '#848484', '#5B5B5B', '#333333']
   };
